@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="figure_unchecked">#3e3d39</color>
+    <color name="figure_checked">#9d9fa2</color>
+    <color name="figure_checked_border">#d5d6d8</color>
+</resources>

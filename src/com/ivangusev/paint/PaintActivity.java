@@ -8,7 +8,6 @@ import android.widget.ToggleButton;
 
 public class PaintActivity extends Activity implements View.OnClickListener {
 
-    public static final int PAINT_IMAGE = 2;
     public static final String FILE_PATH = "file_path";
 
     private PainterView painterView;
@@ -34,8 +33,7 @@ public class PaintActivity extends Activity implements View.OnClickListener {
                 R.id.radio_rect, R.id.font_text, R.id.back, R.id.clear, R.id.changeColor});
 
         arrowToggle.setChecked(true);
-        final String filePath = getIntent().getStringExtra(FILE_PATH);
-        painterView.setBitmapSrc(filePath);
+        painterView.setBitmapSrc(getIntent().getStringExtra(FILE_PATH));
     }
 
     @Override

@@ -1,10 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
               android:layout_width="fill_parent"
-              android:layout_height="fill_parent">
+              android:layout_height="fill_parent"
+              android:baselineAligned="true">
     <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent">
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:minWidth="360dp"
+            android:orientation="vertical">
         <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -14,10 +17,10 @@
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_weight="1"
-                    android:layout_marginRight="2.5dp"
+                    android:layout_marginRight="5dp"
                     android:background="@drawable/figure_button"
                     android:drawableLeft="@drawable/arrow_foto"
-                    android:padding="10dp"
+                    android:padding="8dp"
                     android:textColor="@android:color/white"
                     android:textOff="Стрелка"
                     android:textOn="Стрелка"/>
@@ -27,11 +30,9 @@
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_weight="1"
-                    android:layout_marginLeft="2.5dp"
                     android:background="@drawable/figure_button"
                     android:drawableLeft="@drawable/circle"
-                    android:paddingBottom="8dp"
-                    android:paddingTop="9dp"
+                    android:padding="8dp"
                     android:textColor="@android:color/white"
                     android:textOff="Окружность"
                     android:textOn="Окружность"/>
@@ -45,10 +46,10 @@
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_weight="1"
-                    android:layout_marginRight="2.5dp"
+                    android:layout_marginRight="5dp"
                     android:background="@drawable/figure_button"
                     android:drawableLeft="@drawable/rectangle"
-                    android:padding="9dp"
+                    android:padding="8dp"
                     android:textColor="@android:color/white"
                     android:textOff="Прямоугольник"
                     android:textOn="Прямоугольник"/>
@@ -58,10 +59,9 @@
                     android:layout_width="0dp"
                     android:layout_height="match_parent"
                     android:layout_weight="1"
-                    android:layout_marginLeft="2.5dp"
                     android:background="@drawable/figure_button"
                     android:drawableLeft="@drawable/font"
-                    android:padding="9dp"
+                    android:padding="8dp"
                     android:textColor="@android:color/white"
                     android:textOff="Текст"
                     android:textOn="Текст"/>
@@ -78,7 +78,7 @@
                     android:layout_height="match_parent"
                     android:layout_marginRight="2.5dp"
                     android:padding="10dp"
-                    android:background="#3e3d39"
+                    android:background="@drawable/button"
                     android:src="@drawable/color"
                     android:contentDescription="@android:string/unknownName"/>
 
@@ -89,7 +89,7 @@
                     android:layout_height="match_parent"
                     android:layout_marginLeft="2.5dp"
                     android:padding="10dp"
-                    android:background="#3e3d39"
+                    android:background="@drawable/button"
                     android:src="@drawable/clear"
                     android:contentDescription="@android:string/unknownName"/>
         </LinearLayout>
@@ -103,7 +103,7 @@
                     android:layout_height="match_parent"
                     android:layout_marginRight="2.5dp"
                     android:layout_weight="1"
-                    android:background="#3e3d39"
+                    android:background="@drawable/button"
                     android:padding="10dp"
                     android:src="@drawable/undo"
                     android:contentDescription="@android:string/unknownName"/>
@@ -114,7 +114,7 @@
                     android:layout_height="match_parent"
                     android:layout_weight="1"
                     android:layout_marginLeft="2.5dp"
-                    android:background="#3e3d39"
+                    android:background="@drawable/button"
                     android:padding="10dp"
                     android:src="@drawable/discard"
                     android:contentDescription="@android:string/unknownName"/>
@@ -129,9 +129,17 @@
                 android:text="Сохранить и выйти"
                 android:textSize="15dp"/>
     </LinearLayout>
-    <view
-            android:layout_width="512dp"
-            android:layout_height="384dp"
-            class="com.ivangusev.paint.PainterView"/>
+    <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_weight="1"
+            android:layout_height="match_parent"
+            android:background="@color/figure_checked">
+        <view
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:id="@+id/canvas"
+                class="com.ivangusev.paint.PainterView"/>
+    </FrameLayout>
 </LinearLayout>
 

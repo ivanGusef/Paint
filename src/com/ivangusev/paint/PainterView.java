@@ -3,9 +3,14 @@ package com.ivangusev.paint;
 import android.content.Context;
 import android.graphics.*;
 import android.media.ExifInterface;
+import android.os.Environment;
+import android.os.Handler;
 import android.util.AttributeSet;
+import android.util.Log;
+import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.FrameLayout;
 import com.ivangusev.paint.draw.Figure;
 import com.ivangusev.paint.draw.impl.Arrow;
 import com.ivangusev.paint.draw.impl.Circle;
@@ -23,15 +28,26 @@ import java.nio.ByteBuffer;
  */
 public class PainterView extends View implements View.OnTouchListener {
 
+    private static final String DST_FOLDER_NAME = "MARM_PAINT";
+    private static final File DST_FOLDER;
+
+    private static final int CANVAS_WIDTH = 512;
+    private static final int CANVAS_HEIGHT = 384;
+
     public static final int MODE_ARROW = 0;
     public static final int MODE_CIRCLE = 1;
     public static final int MODE_RECT = 2;
     public static final int MODE_TEXT = 3;
 
+    static {
+        DST_FOLDER = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES), DST_FOLDER_NAME);
+        if (!DST_FOLDER.exists() && !DST_FOLDER.mkdirs()) {
+            Log.e("PainterView", "Directory " + DST_FOLDER.getPath() + " can not be created");
+        }
+    }
+
     public String mPaintText = "";
     public float mTextSize = 14;
-
-    private int mEventMode;
 
     private Paint mPaint;
 
@@ -42,7 +58,10 @@ public class PainterView extends View implements View.OnTouchListener {
     private Figure mFigure;
     private State mState;
 
-    private String fileName;
+    private int mEventMode;
+
+    private Handler mHandler;
+    private String mBitmapSrc;
 
     public PainterView(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -58,38 +77,46 @@ public class PainterView extends View implements View.OnTouchListener {
 
         mFigure = new Arrow();
         mState = new State();
+        mHandler = new Handler();
 
-        if (mStateBitmap == null) {
-            mStateBitmap = Bitmap.createBitmap(800, 800, Bitmap.Config.ARGB_8888);
-        }
+        mStateBitmap = Bitmap.createBitmap(1,1, Bitmap.Config.ARGB_8888);
 
         setOnTouchListener(this);
     }
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
-        switch (event.getAction()) {
+        switch (mEventMode = event.getAction()) {
             case MotionEvent.ACTION_DOWN:
-                mEventMode = MotionEvent.ACTION_DOWN;
                 mFigure.setStartXY(event.getX(), event.getY());
-                mCanvas.drawBitmap(getStateBitmap(), 0, 0, null);
                 break;
             case MotionEvent.ACTION_UP:
-                mEventMode = MotionEvent.ACTION_UP;
                 mFigure.setEndXY(event.getX(), event.getY());
-                mCanvas.drawBitmap(getNewBitmap(), 0, 0, null);
-                mFigure.draw(mCanvas, mPaint);
-                mCanvas.drawBitmap(getStateBitmap(), 0, 0, null);
                 break;
             case MotionEvent.ACTION_MOVE:
-                mEventMode = MotionEvent.ACTION_MOVE;
                 mFigure.setEndXY(event.getX(), event.getY());
-                mCanvas.drawBitmap(getTempBitmap(), 0, 0, null);
-                mFigure.draw(mCanvas, mPaint);
                 break;
         }
         invalidate();
         return true;
+    }
+
+    @Override
+    protected void onDraw(Canvas canvas) {
+        switch (mEventMode) {
+            case MotionEvent.ACTION_MOVE:
+                canvas.drawBitmap(getTempBitmap(), 0, 0, null);
+                mFigure.draw(canvas, mPaint);
+                break;
+            case MotionEvent.ACTION_UP:
+                canvas.drawBitmap(getNewBitmap(), 0, 0, null);
+                mFigure.draw(mCanvas, mPaint);
+                canvas.drawBitmap(getStateBitmap(), 0, 0, null);
+                break;
+            default:
+                canvas.drawBitmap(getStateBitmap(), 0, 0, null);
+                break;
+        }
     }
 
     @Override
@@ -144,7 +171,7 @@ public class PainterView extends View implements View.OnTouchListener {
     }
 
     public void back() {
-        mEventMode = 3;
+        mEventMode = -100;
         if (mState.prevBuffer == null) {
             restoreBuffer(mState.startBuffer);
         } else {
@@ -155,32 +182,55 @@ public class PainterView extends View implements View.OnTouchListener {
     }
 
     public void clear() {
-        mEventMode = 4;
+        mEventMode = -100;
         restoreBuffer(mState.startBuffer);
         toStartState();
         invalidate();
     }
 
-    public void saveImage() throws FileNotFoundException {
-        if (fileName == null || "".equals(fileName)) return;
-        FileOutputStream fos = new FileOutputStream(fileName);
-        getStateBitmap().compress(Bitmap.CompressFormat.JPEG, 100, fos);
+    public String saveImage() {
+        ByteArrayOutputStream baos = null;
+        FileOutputStream fos = null;
+        try {
+            baos = new ByteArrayOutputStream();
+            getStateBitmap().compress(Bitmap.CompressFormat.JPEG, 100, baos);
+
+            final File dst = new File(DST_FOLDER, String.valueOf(System.currentTimeMillis() + ".jpg"));
+            fos = new FileOutputStream(dst);
+            fos.write(baos.toByteArray());
+            return dst.getPath();
+        } catch (IOException e) {
+            Log.e("PainterView -> saveImage", e.getMessage(), e);
+            return null;
+        } finally {
+            if (fos != null) {
+                try {
+                    fos.close();
+                } catch (IOException e) {
+                    //ignore
+                }
+            }
+            if (baos != null) {
+                try {
+                    baos.close();
+                } catch (IOException e) {
+                    //ignore
+                }
+            }
+        }
     }
 
     private void toStartState() {
         mState.prevBuffer = saveBuffer();
         mState.startBuffer = saveBuffer();
-        mState.isPrev = false;
     }
 
     private void toPreviousState() {
         mState.prevBuffer = saveBuffer();
-        mState.isPrev = false;
     }
 
     private void toNextState() {
         mState.prevBuffer = saveBuffer();
-        mState.isPrev = true;
     }
 
     private byte[] saveBuffer() {
@@ -196,15 +246,9 @@ public class PainterView extends View implements View.OnTouchListener {
         mStateBitmap.copyPixelsFromBuffer(byteBuffer);
     }
 
-    public String getFileName() {
-        return fileName;
-    }
-
-    public void setFileName(String fileName) {
-        this.fileName = fileName;
-        mStateBitmap = PainterView.createThumbnail(fileName, 800);
-        mState.startBuffer = saveBuffer();
-        invalidate();
+    public void setBitmapSrc(String fileName) {
+        mBitmapSrc = fileName;
+        post(new BitmapPreparer(fileName));
     }
 
     public void setPaintColor(int color) {
@@ -219,26 +263,32 @@ public class PainterView extends View implements View.OnTouchListener {
         mPaint.setStrokeWidth(width);
     }
 
+    private void recalcLayoutParams(int width, int height) {
+        final FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(width, height);
+        params.gravity = Gravity.CENTER;
+        setLayoutParams(params);
+    }
+
     public static class State {
         public byte[] prevBuffer = null;
         public byte[] startBuffer = null;
-        public boolean isPrev = false;
     }
 
-    public static Bitmap createThumbnail(String file, int squareSize) {
+    public static Bitmap createThumbnail(String file, int width, int height) {
         InputStream inputStream = null;
         try {
-            BitmapFactory.Options options = new BitmapFactory.Options();
+            final BitmapFactory.Options options = new BitmapFactory.Options();
             inputStream = new FileInputStream(file);
-            options.inSampleSize = PainterView.calculateInSampleSize(inputStream, squareSize, squareSize);
+            options.inSampleSize = PainterView.calculateInSampleSize(inputStream, width, height);
             inputStream.close();
             inputStream = new FileInputStream(file);
             Bitmap bitmap = BitmapFactory.decodeStream(inputStream, null, options);
             if (bitmap != null) {
-                return rotateBitmap(file, bitmap);
+                return scaleBitmap(rotateBitmap(file, bitmap), width, height);
             }
             return bitmap;
         } catch (IOException e) {
+            Log.e("PainterView -> createThumbnail", e.getMessage(), e);
             return null;
         } finally {
             if (inputStream != null) {
@@ -249,6 +299,56 @@ public class PainterView extends View implements View.OnTouchListener {
                 }
             }
         }
+    }
+
+    public static Bitmap decodeBitmap(String file) {
+        InputStream inputStream = null;
+        try {
+            inputStream = new FileInputStream(file);
+            return BitmapFactory.decodeStream(inputStream);
+        } catch (IOException e) {
+            Log.e("PainterView -> createThumbnail", e.getMessage(), e);
+            return null;
+        } finally {
+            if (inputStream != null) {
+                try {
+                    inputStream.close();
+                } catch (IOException e) {
+                    //ignore
+                }
+            }
+        }
+    }
+
+    public static Bitmap scaleBitmap(Bitmap bitmap, int reqWidth, int reqHeight) {
+        Matrix matrix = new Matrix();
+        matrix.preScale((float) reqWidth / bitmap.getWidth(), (float) reqHeight / bitmap.getHeight());
+        final Bitmap immutableBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
+        bitmap.recycle();
+        final Bitmap mutableBitmap = immutableBitmap.copy(Bitmap.Config.ARGB_8888, true);
+        immutableBitmap.recycle();
+        return mutableBitmap;
+    }
+
+    public static Bitmap rotateBitmap(String src, Bitmap bitmap) {
+        try {
+            ExifInterface exif = new ExifInterface(src);
+            int rotation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
+            int rotationInDegrees = exifToDegrees(rotation);
+
+            Matrix matrix = new Matrix();
+            if (rotation != 0f) {
+                matrix.preRotate(rotationInDegrees);
+                final Bitmap immutableBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
+                bitmap.recycle();
+                final Bitmap mutableBitmap = immutableBitmap.copy(Bitmap.Config.ARGB_8888, true);
+                immutableBitmap.recycle();
+                return mutableBitmap;
+            }
+        } catch (IOException e) {
+            Log.e("PainterView -> rotateAndScaleBitmap", e.getMessage(), e);
+        }
+        return bitmap;
     }
 
     public static int calculateInSampleSize(InputStream fileStream, int reqWidth, int reqHeight) {
@@ -268,23 +368,6 @@ public class PainterView extends View implements View.OnTouchListener {
         return inSampleSize;
     }
 
-    public static Bitmap rotateBitmap(String src, Bitmap bitmap) {
-        try {
-            ExifInterface exif = new ExifInterface(src);
-            int rotation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL);
-            int rotationInDegrees = exifToDegrees(rotation);
-
-            Matrix matrix = new Matrix();
-            if (rotation != 0f) {
-                matrix.preRotate(rotationInDegrees);
-                return Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return bitmap;
-    }
-
     private static int exifToDegrees(int exifOrientation) {
         if (exifOrientation == ExifInterface.ORIENTATION_ROTATE_90) {
             return 90;
@@ -294,5 +377,43 @@ public class PainterView extends View implements View.OnTouchListener {
             return 270;
         }
         return 0;
+    }
+
+    private class BitmapPreparer implements Runnable {
+
+        private final String fileName;
+
+        private BitmapPreparer(String fileName) {
+            this.fileName = fileName;
+        }
+
+        @Override
+        public void run() {
+            final FrameLayout parent = (FrameLayout) getParent();
+            final int maxWidth = parent.getMeasuredWidth();
+            final int maxHeight = parent.getMeasuredHeight();
+            if (fileName == null) {
+                mStateBitmap = Bitmap.createBitmap(maxWidth, maxHeight, Bitmap.Config.ARGB_8888);
+                mCanvas = new Canvas(mStateBitmap);
+                mCanvas.drawColor(Color.WHITE);
+                mState.startBuffer = saveBuffer();
+            } else {
+                Bitmap bitmap = PainterView.rotateBitmap(fileName, PainterView.decodeBitmap(fileName));
+                final int bitmapMaxWidth = bitmap.getWidth();
+                final int bitmapMaxHeight = bitmap.getHeight();
+                final float factor = (float) bitmapMaxWidth / bitmapMaxHeight;
+                bitmap.recycle();
+
+                final int decodeWidth, decodeHeight;
+                if (bitmapMaxWidth > maxWidth || bitmapMaxHeight > maxHeight) {
+                    decodeWidth = Math.min(bitmapMaxWidth, maxWidth);
+                    decodeHeight = Math.round(decodeWidth / factor);
+                    mStateBitmap = PainterView.createThumbnail(fileName, decodeWidth, decodeHeight);
+                } else {
+                    mStateBitmap = PainterView.createThumbnail(fileName, bitmapMaxWidth, bitmapMaxHeight);
+                }
+                mState.startBuffer = saveBuffer();
+            }
+        }
     }
 }

@@ -217,8 +217,8 @@ public class ColorPickerDialog extends Dialog {
             }
         };
 
-        setContentView(new ColorPickerView(getContext(), l, mInitialColor));
         getWindow().requestFeature(Window.FEATURE_NO_TITLE);
         getWindow().setGravity(Gravity.CENTER);
+        setContentView(new ColorPickerView(getContext(), l, mInitialColor));
     }
 }

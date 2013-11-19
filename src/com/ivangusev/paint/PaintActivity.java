@@ -3,11 +3,15 @@ package com.ivangusev.paint;
 import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Environment;
 import android.view.View;
 import android.widget.ToggleButton;
 
+import java.io.File;
+
 public class PaintActivity extends Activity implements View.OnClickListener {
 
+    public static final int PAINT_IMAGE = 2;
     public static final String FILE_PATH = "file_path";
 
     private PainterView painterView;
@@ -33,12 +37,9 @@ public class PaintActivity extends Activity implements View.OnClickListener {
                 R.id.radio_rect, R.id.font_text, R.id.back, R.id.clear, R.id.changeColor});
 
         arrowToggle.setChecked(true);
-        painterView.setBitmapSrc(getIntent().getStringExtra(FILE_PATH));
-    }
 
-    @Override
-    protected void onStart() {
-        super.onStart();
+        File file = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM), "Camera");
+        painterView.setBitmapSrc(file.listFiles()[0].getPath());//getIntent().getStringExtra(FILE_PATH));
     }
 
     private void setClickListener(int[] ids) {

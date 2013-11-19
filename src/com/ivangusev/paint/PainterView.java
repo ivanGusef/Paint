@@ -4,7 +4,6 @@ import android.content.Context;
 import android.graphics.*;
 import android.media.ExifInterface;
 import android.os.Environment;
-import android.os.Handler;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.Gravity;
@@ -30,9 +29,6 @@ public class PainterView extends View implements View.OnTouchListener {
 
     private static final String DST_FOLDER_NAME = "MARM_PAINT";
     private static final File DST_FOLDER;
-
-    private static final int CANVAS_WIDTH = 512;
-    private static final int CANVAS_HEIGHT = 384;
 
     public static final int MODE_ARROW = 0;
     public static final int MODE_CIRCLE = 1;
@@ -60,9 +56,6 @@ public class PainterView extends View implements View.OnTouchListener {
 
     private int mEventMode;
 
-    private Handler mHandler;
-    private String mBitmapSrc;
-
     public PainterView(Context context, AttributeSet attrs) {
         super(context, attrs);
         mPaint = new Paint();
@@ -77,9 +70,8 @@ public class PainterView extends View implements View.OnTouchListener {
 
         mFigure = new Arrow();
         mState = new State();
-        mHandler = new Handler();
 
-        mStateBitmap = Bitmap.createBitmap(1,1, Bitmap.Config.ARGB_8888);
+        mStateBitmap = Bitmap.createBitmap(1, 1, Bitmap.Config.ARGB_8888);
 
         setOnTouchListener(this);
     }
@@ -247,7 +239,6 @@ public class PainterView extends View implements View.OnTouchListener {
     }
 
     public void setBitmapSrc(String fileName) {
-        mBitmapSrc = fileName;
         post(new BitmapPreparer(fileName));
     }
 
@@ -406,14 +397,20 @@ public class PainterView extends View implements View.OnTouchListener {
 
                 final int decodeWidth, decodeHeight;
                 if (bitmapMaxWidth > maxWidth || bitmapMaxHeight > maxHeight) {
-                    decodeWidth = Math.min(bitmapMaxWidth, maxWidth);
-                    decodeHeight = Math.round(decodeWidth / factor);
+                    if (bitmapMaxWidth > bitmapMaxHeight) {
+                        decodeWidth = Math.min(bitmapMaxWidth, maxWidth);
+                        decodeHeight = Math.round(decodeWidth / factor);
+                    } else {
+                        decodeHeight = Math.min(bitmapMaxHeight, maxHeight);
+                        decodeWidth = Math.round(decodeHeight * factor);
+                    }
                     mStateBitmap = PainterView.createThumbnail(fileName, decodeWidth, decodeHeight);
                 } else {
                     mStateBitmap = PainterView.createThumbnail(fileName, bitmapMaxWidth, bitmapMaxHeight);
                 }
                 mState.startBuffer = saveBuffer();
             }
+            recalcLayoutParams(mStateBitmap.getWidth(), mStateBitmap.getHeight());
         }
     }
 }
